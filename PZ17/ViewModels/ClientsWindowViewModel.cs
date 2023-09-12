@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
-using MySql.Data.MySqlClient;
 using PZ17.Models;
 
 namespace PZ17.ViewModels;
