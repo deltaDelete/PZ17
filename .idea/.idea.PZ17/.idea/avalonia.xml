@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="PZ17/App.axaml" value="PZ17/PZ17.csproj" />
+        <entry key="PZ17/MainWindow.axaml" value="PZ17/PZ17.csproj" />
+        <entry key="PZ17/SubWindows/ClientsWindow.axaml" value="PZ17/PZ17.csproj" />
+        <entry key="PZ17/SubWindows/ProceduresClientsWindow.axaml" value="PZ17/PZ17.csproj" />
+        <entry key="PZ17/SubWindows/ProceduresWindow.axaml" value="PZ17/PZ17.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

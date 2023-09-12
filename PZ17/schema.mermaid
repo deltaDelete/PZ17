@@ -1,0 +1,21 @@
+erDiagram
+clients {
+   integer client_id PK
+   text last_name
+   text first_name
+}
+procedures {
+   integer procedure_id PK
+   text procedure_name
+   real base_price
+}
+procedures_clients {
+   integer id PK
+   integer client_id
+   integer procedure_id
+   text date
+   real price
+}
+
+procedures_clients  one--many(1) clients : client_id
+procedures_clients  one--many(1) procedures : procedure_id
