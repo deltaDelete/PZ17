@@ -26,11 +26,10 @@ public class Database : IDisposable, IAsyncDisposable {
     /// <summary>
     /// Крутой Generic метод для аннотированных атрибутом Column классов
     /// </summary>
-    /// <param name="table_name">TEMPORARY: Имя таблицы из которой будет производится чтение</param>
     /// <typeparam name="T">Тип получаемых объектов</typeparam>
     /// <returns>Все объекты таблицы преобразованные в тип T</returns>
     public IEnumerable<T> Get<T>() where T : new() {
-        var columns = GetColumns<T>();
+        var columns = GetColumns<T>().ToList();
         var tableInfo = GetTableName<T>();
         if (tableInfo is null) throw new Exception($"Тип {nameof(T)} не имеет атрибута Table");
 
@@ -41,6 +40,10 @@ public class Database : IDisposable, IAsyncDisposable {
         while (reader.Read()) {
             var obj = new T();
             foreach (var column in columns) {
+                if (column.ColumnAttribute.Name is null) {
+                    throw new Exception($"Атрибут Column свойства {column.Property.Name} типа {nameof(T)} " +
+                                        "не имеет заданного имени");
+                }
                 column.Property.SetValue(obj, reader.GetValue(column.ColumnAttribute.Name));
             }
 
@@ -63,6 +66,42 @@ public class Database : IDisposable, IAsyncDisposable {
         }
     }
 
+    public T? GetById<T>(int id) where T : new() {
+        var columns = GetColumns<T>().ToList();
+        var tableInfo = GetTableName<T>();
+        if (tableInfo is null) throw new Exception($"Тип {nameof(T)} не имеет атрибута Table");
+
+        var keys = columns
+            .Where(it => it.Property.GetCustomAttribute<KeyAttribute>() is not null)
+            .Select(it => it.Property)
+            .ToList();
+        if (!keys.Any()) {
+            throw new Exception($"Тип {nameof(T)} не содержит свойства с атрибутом Key");
+        }
+
+        var primaryKeyAttribute = keys.First().GetCustomAttribute<ColumnAttribute>();
+        if (primaryKeyAttribute is null) {
+            throw new Exception($"Свойство {keys.First().Name} типа {nameof(T)} не имеет атрибута Column");
+        }
+
+        var primaryKey = primaryKeyAttribute.Name;
+
+        using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}` where `{primaryKey}` = {id}", _connection);
+        var reader = cmd.ExecuteReader();
+        while (reader.Read()) {
+            var obj = new T();
+            foreach (var column in columns) {
+                if (column.ColumnAttribute.Name is null) {
+                    throw new Exception($"Атрибут Column свойства {column.Property.Name} типа {nameof(T)} " +
+                                        "не имеет заданного имени");
+                }
+                column.Property.SetValue(obj, reader.GetValue(column.ColumnAttribute.Name));
+            }
+            return obj;
+        }
+        cmd.Cancel();
+        return default;
+    }
     
     static Func<CustomAttributeData, bool> typeChecker = p => p.AttributeType == typeof(ColumnAttribute);
 
@@ -93,4 +132,69 @@ public class Database : IDisposable, IAsyncDisposable {
     public async ValueTask DisposeAsync() {
         await _connection.DisposeAsync();
     }
+
+    #region Async
+
+    public async Task<T?> GetByIdAsync<T>(int id) where T : new() {
+        var columns = GetColumns<T>().ToList();
+        var tableInfo = GetTableName<T>();
+        if (tableInfo is null) throw new Exception($"Тип {nameof(T)} не имеет атрибута Table");
+
+        var keys = columns
+            .Where(it => it.Property.GetCustomAttribute<KeyAttribute>() is not null)
+            .Select(it => it.Property)
+            .ToList();
+        if (!keys.Any()) {
+            throw new Exception($"Тип {nameof(T)} не содержит свойства с атрибутом Key");
+        }
+
+        var primaryKeyAttribute = keys.First().GetCustomAttribute<ColumnAttribute>();
+        if (primaryKeyAttribute is null) {
+            throw new Exception($"Свойство {keys.First().Name} типа {nameof(T)} не имеет атрибута Column");
+        }
+
+        var primaryKey = primaryKeyAttribute.Name;
+
+        using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}` where `{primaryKey}` = {id}", _connection);
+        var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync()) {
+            var obj = new T();
+            foreach (var column in columns) {
+                if (column.ColumnAttribute.Name is null) {
+                    throw new Exception($"Атрибут Column свойства {column.Property.Name} типа {nameof(T)} " +
+                                        "не имеет заданного имени");
+                }
+
+                column.Property.SetValue(obj, reader.GetValue(column.ColumnAttribute.Name));
+            }
+
+            return obj;
+        }
+        return default;
+    }
+    
+    public async IAsyncEnumerable<T> GetAsync<T>() where T : new() {
+        var columns = GetColumns<T>().ToList();
+        var tableInfo = GetTableName<T>();
+        if (tableInfo is null) throw new Exception($"Тип {nameof(T)} не имеет атрибута Table");
+
+        if (_connection.State != ConnectionState.Open) _connection.Open();
+        await using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}`", _connection);
+        var reader = await cmd.ExecuteReaderAsync();
+
+        while (reader.Read()) {
+            var obj = new T();
+            foreach (var column in columns) {
+                if (column.ColumnAttribute.Name is null) {
+                    throw new Exception($"Атрибут Column свойства {column.Property.Name} типа {nameof(T)} " +
+                                        "не имеет заданного имени");
+                }
+                column.Property.SetValue(obj, reader.GetValue(column.ColumnAttribute.Name));
+            }
+
+            yield return obj;
+        }
+    }
+
+    #endregion
 }
