@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Linq;
@@ -28,21 +29,26 @@ public class Database : IDisposable, IAsyncDisposable {
     /// <param name="table_name">TEMPORARY: Имя таблицы из которой будет производится чтение</param>
     /// <typeparam name="T">Тип получаемых объектов</typeparam>
     /// <returns>Все объекты таблицы преобразованные в тип T</returns>
-    public IEnumerable<T> Get<T>(string table_name) where T : new() {
-        if (_connection.State != ConnectionState.Open) _connection.Open();
-        using var cmd = new MySqlCommand(table_name, _connection);
-        cmd.CommandType = CommandType.TableDirect;
-        var reader = cmd.ExecuteReader();
+    public IEnumerable<T> Get<T>() where T : new() {
         var columns = GetColumns<T>();
+        var tableInfo = GetTableName<T>();
+        if (tableInfo is null) throw new Exception($"Тип {nameof(T)} не имеет атрибута Table");
+
+        if (_connection.State != ConnectionState.Open) _connection.Open();
+        using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}`", _connection);
+        var reader = cmd.ExecuteReader();
+
         while (reader.Read()) {
             var obj = new T();
-            foreach (var column in columns) { 
+            foreach (var column in columns) {
                 column.Property.SetValue(obj, reader.GetValue(column.ColumnAttribute.Name));
             }
+
             yield return obj;
         }
     }
 
+    [Obsolete("Генерик лучше")]
     public IEnumerable<Client> GetUsers() {
         if (_connection.State != ConnectionState.Open) _connection.Open();
         using var cmd = new MySqlCommand("select * from clients", _connection);
@@ -59,21 +65,26 @@ public class Database : IDisposable, IAsyncDisposable {
 
     
     static Func<CustomAttributeData, bool> typeChecker = p => p.AttributeType == typeof(ColumnAttribute);
+
     private static IEnumerable<ColumnInfo> GetColumns<T>() {
         return typeof(T)
             .GetProperties()
-            .Where((it, i) 
-                => it.CustomAttributes.Any(typeChecker)
-            ).Select(it => new ColumnInfo {
-                Property = it,
-                ColumnAttribute = (ColumnAttribute)it.GetCustomAttributes().First()
-            });
+            .Where(it => it.CustomAttributes.Any(typeChecker))
+            .Select(
+                it => new ColumnInfo(it, it.GetCustomAttribute<ColumnAttribute>()!)
+            );
     }
 
-    class ColumnInfo {
-        public PropertyInfo Property { get; set; }
-        public ColumnAttribute ColumnAttribute { get; set; }
+    private static TableInfo? GetTableName<T>() {
+        IEnumerable<TableInfo?> info = typeof(T)
+            .GetCustomAttributes<TableAttribute>()
+            .Select(it => new TableInfo(typeof(T), it.Name));
+        return info.Any() ? info.First() : null;
     }
+
+    public record ColumnInfo(PropertyInfo Property, ColumnAttribute ColumnAttribute);
+
+    public record TableInfo(Type Type, String Name);
 
     public void Dispose() {
         _connection.Dispose();

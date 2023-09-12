@@ -14,7 +14,7 @@ public class ClientsWindowViewModel : ViewModelBase {
     private async void GetDataFromDb() {
         using var db = new Database();
 
-        var users = db.Get<Client>("clients");
+        var users = db.Get<Client>();
         foreach (var user in users) {
             Users.Add(user);
         }

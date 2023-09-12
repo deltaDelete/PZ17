@@ -13,7 +13,7 @@ public class ProceduresWindowViewModel : ViewModelBase {
     private async void GetDataFromDb() {
         using var db = new Database();
 
-        var procedures = db.Get<Procedure>("procedures");
+        var procedures = db.Get<Procedure>();
         foreach (var procedure in procedures) {
             Procedures.Add(procedure);
         }
