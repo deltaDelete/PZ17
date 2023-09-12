@@ -11,14 +11,14 @@ using PZ17.Models;
 namespace PZ17;
 
 public class Database : IDisposable, IAsyncDisposable {
-    public const string CONNECTION_STRING =
+    public const string ConnectionString =
         // "Server=10.10.1.24;Uid=user_01;Database=pro1_2;Port=3306;Pwd=user01pro;";
     "Server=10.10.1.24;Database=pro1_2;Uid=user_01;Pwd=user01pro;";
 
     private MySqlConnection _connection;
 
     public Database() {
-        _connection = new MySqlConnection(CONNECTION_STRING);
+        _connection = new MySqlConnection(ConnectionString);
         _connection.Open();
     }
 
