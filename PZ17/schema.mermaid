@@ -11,8 +11,8 @@ procedures {
 }
 procedures_clients {
    integer id PK
-   integer client_id
-   integer procedure_id
+   integer client_id FK
+   integer procedure_id FK
    text date
    real price
 }
