@@ -1,9 +1,12 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PZ17.Models; 
 
+[Table("procedures_clients")]
 public class ProcedureClient {
+    [Key]
     [Column("id")]
     public int Id { get; set; }
     [Column("procedure_id")]
