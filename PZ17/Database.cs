@@ -55,7 +55,7 @@ public class Database : IDisposable, IAsyncDisposable {
     public IEnumerable<Client> GetUsers() {
         if (_connection.State != ConnectionState.Open) _connection.Open();
         using var cmd = new MySqlCommand("select * from clients", _connection);
-        var reader = cmd.ExecuteReader();
+        using var reader = cmd.ExecuteReader();
         var columns = GetColumns<Client>();
         while (reader.Read()) {
             yield return new Client() {
@@ -87,7 +87,7 @@ public class Database : IDisposable, IAsyncDisposable {
         var primaryKey = primaryKeyAttribute.Name;
 
         using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}` where `{primaryKey}` = {id}", _connection);
-        var reader = cmd.ExecuteReader();
+        using var reader = cmd.ExecuteReader();
         while (reader.Read()) {
             var obj = new T();
             foreach (var column in columns) {
@@ -120,10 +120,28 @@ public class Database : IDisposable, IAsyncDisposable {
             .Select(it => new TableInfo(typeof(T), it.Name));
         return info.Any() ? info.First() : null;
     }
+    
+    
+    public static IEnumerable<ForeignKeyInfo> GetForeignKeys<T>()
+    {
+        var props = typeof(T)
+            .GetProperties()
+            .Where(
+                it => it.GetCustomAttribute<ForeignKeyAttribute>() is not null
+                      && it.GetCustomAttribute<ColumnAttribute>() is not null)
+            .ToList();
+        var info = props.Select(
+            it => new Database.ForeignKeyInfo(
+                it.GetCustomAttribute<ColumnAttribute>()!.Name!,
+                it.GetCustomAttribute<ForeignKeyAttribute>()!.Name));
+        return info;
+    }
 
     public record ColumnInfo(PropertyInfo Property, ColumnAttribute ColumnAttribute);
 
     public record TableInfo(Type Type, String Name);
+
+    public record ForeignKeyInfo(string Column, string ForeignColumn);
 
     public void Dispose() {
         _connection.Dispose();
@@ -155,8 +173,8 @@ public class Database : IDisposable, IAsyncDisposable {
 
         var primaryKey = primaryKeyAttribute.Name;
 
-        using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}` where `{primaryKey}` = {id}", _connection);
-        var reader = await cmd.ExecuteReaderAsync();
+        await using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}` where `{primaryKey}` = {id}", _connection);
+        await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync()) {
             var obj = new T();
             foreach (var column in columns) {
@@ -180,7 +198,7 @@ public class Database : IDisposable, IAsyncDisposable {
 
         if (_connection.State != ConnectionState.Open) _connection.Open();
         await using var cmd = new MySqlCommand($"select * from `{tableInfo.Name}`", _connection);
-        var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await cmd.ExecuteReaderAsync();
 
         while (reader.Read()) {
             var obj = new T();

@@ -1,21 +1,57 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 using PZ17.Models;
 
-namespace PZ17.ViewModels; 
+namespace PZ17.ViewModels;
 
 public class ProceduresWindowViewModel : ViewModelBase {
-    public ObservableCollection<Procedure> Procedures { get; set; } = new();
+    private string _searchQuery = "";
+    private ObservableCollection<Procedure> _procedures = new();
+
+    public ObservableCollection<Procedure> Procedures {
+        get => _procedures;
+        set {
+            if (Equals(value, _procedures)) return;
+            _procedures = value;
+            RaisePropertyChanged();
+        }
+    }
+
+    public string SearchQuery {
+        get => _searchQuery;
+        set {
+            if (value == _searchQuery) return;
+            _searchQuery = value;
+            RaisePropertyChanged();
+        }
+    }
 
     public ProceduresWindowViewModel() {
         GetDataFromDb();
+        PropertyChanged += OnSearchChanged;
+    }
+
+    private void OnSearchChanged(object? sender, PropertyChangedEventArgs e) {
+        if (e.PropertyName != nameof(SearchQuery)) {
+            return;
+        }
+
+        if (SearchQuery == "") {
+            GetDataFromDb();
+            return;
+        }
+
+        Procedures = new(Procedures.Where(
+                it => it.ProcedureName.ToLower().Contains(SearchQuery.ToLower())
+            )
+        );
     }
 
     private async void GetDataFromDb() {
         using var db = new Database();
 
         var procedures = db.Get<Procedure>();
-        foreach (var procedure in procedures) {
-            Procedures.Add(procedure);
-        }
+        Procedures = new(procedures);
     }
 }
