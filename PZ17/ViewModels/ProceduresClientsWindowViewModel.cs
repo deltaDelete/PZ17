@@ -25,14 +25,16 @@ public class ProceduresClientsWindowViewModel : ViewModelBase {
     private async void GetDataFromDb() {
         var db = new Database();
 
-        var list = db.GetAsync<ProcedureClient>();
-        var enumerator = list.GetAsyncEnumerator();
-        while (await enumerator.MoveNextAsync()) {
-            ProceduresClients.Add(enumerator.Current);
-        }
+        var asyncList = db.GetAsync<ProcedureClient>();
+        // await using var enumerator = list.GetAsyncEnumerator();
+        // while (await enumerator.MoveNextAsync()) {
+        //     ProceduresClients.Add(enumerator.Current);
+        // }
+        // db = new Database();
+        // либо же с использованием System.Linq.Async
+        var list = await asyncList.ToListAsync();
 
-        db = new Database();
-        var joined = ProceduresClients.Select(
+        var joined = list.Select(
             it =>
             {
                 it.Procedure = db.GetById<Procedure>(it.ProcedureId);
