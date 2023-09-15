@@ -7,7 +7,7 @@ using PZ17.Models;
 namespace PZ17.ViewModels;
 
 public class ClientsWindowViewModel : ViewModelBase {
-    private string _searchQuery = "";
+    private string _searchQuery = string.Empty;
     private ObservableCollection<Client> _users = new();
 
     public ObservableCollection<Client> Users {
