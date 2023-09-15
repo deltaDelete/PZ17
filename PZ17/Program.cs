@@ -1,5 +1,7 @@
 ﻿using Avalonia;
 using System;
+using System.Collections.Generic;
+using Avalonia.OpenGL;
 
 namespace PZ17;
 
@@ -17,5 +19,6 @@ class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            .With(new X11PlatformOptions() {RenderingMode = new [] { X11RenderingMode.Egl }});
 }
